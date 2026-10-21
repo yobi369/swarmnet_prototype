@@ -6,23 +6,23 @@ export interface Drone extends Point {
   target: Point; range: number; active: boolean;
 }
 export interface Survivor extends Point {
-  id: number; emergency: boolean; connected: boolean; localCoverage: boolean; signal: number;
+  id: number; emergency: boolean; connected: boolean; localCoverage: boolean; signal: number; pathLatencyMs: number | null;
 }
 export interface Hazard extends Point { id: number; kind: HazardKind; radius: number }
-export interface Link { from: number; to: number; strength: number }
+export interface Link { from: number; to: number; strength: number; available: boolean; latencyMs: number }
 export interface Scenario {
   width?: number; height?: number; droneCount?: number; survivorCount?: number;
-  hazardCount?: number; seed?: number;
+  hazardCount?: number; seed?: number; packetLossRate?: number; linkLatencyMs?: number;
 }
 export interface Metrics {
   tick: number; activeDrones: number; survivorCoverage: number;
   localCoverageSurvivors: number; connectedSurvivors: number; emergencyConnected: number;
-  networkLinks: number; gatewayDrones: number; meanBattery: number;
+  networkLinks: number; availableLinks: number; gatewayDrones: number; meanPathLatencyMs: number; meanBattery: number;
   estimatedAreaCoverage: number;
 }
 export interface World {
   width: number; height: number; tick: number; seed: number;
-  baseStation: Point; baseRange: number;
+  baseStation: Point; baseRange: number; packetLossRate: number; linkLatencyMs: number;
   drones: Drone[]; survivors: Survivor[]; hazards: Hazard[]; links: Link[];
   metrics: Metrics;
 }
@@ -38,7 +38,7 @@ function randomFor(seed: number) {
     return state / 0x100000000;
   };
 }
-function metricsFor(world: Omit<World, 'metrics'>): Metrics {
+function deterministicUnit(seed: number, tick: number, from: number, to: number) {\n  const raw = Math.sin((seed + 1) * 12.9898 + (tick + 1) * 78.233 + (from + 2) * 37.719 + (to + 3) * 11.131) * 43758.5453;\n  return raw - Math.floor(raw);\n}\nfunction metricsFor(world: Omit<World, 'metrics'>): Metrics {
   const connected = world.survivors.filter(s => s.connected);
   const local = world.survivors.filter(s => s.localCoverage);
   const total = world.survivors.length;
@@ -94,18 +94,18 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
     }
   }
   for (const s of world.survivors) {
-    let bestLocal = 0, bestEndToEnd = 0;
+    let bestLocal = 0, bestEndToEnd = 0, bestHops = Infinity;
     for (const d of active) {
       const dist = distance(d, s);
       if (dist <= d.range) {
         const signal = clamp(1 - dist / d.range, 0, 1);
         bestLocal = Math.max(bestLocal, signal);
-        if (reachable.has(d.id)) bestEndToEnd = Math.max(bestEndToEnd, signal);
+        if (reachable.has(d.id)) {\n          bestEndToEnd = Math.max(bestEndToEnd, signal);\n          bestHops = Math.min(bestHops, (hops.get(d.id) ?? 0) + 1);\n        }
       }
     }
     s.localCoverage = bestLocal > 0;
     s.connected = bestEndToEnd > 0;
-    s.signal = Math.round(bestLocal * 100);
+    s.signal = Math.round(bestLocal * 100);\n    s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
   }
 }
 export function createWorld(options: Scenario = {}): World {
@@ -113,7 +113,7 @@ export function createWorld(options: Scenario = {}): World {
   const droneCount = clamp(Math.floor(options.droneCount ?? 15), 1, 100);
   const survivorCount = clamp(Math.floor(options.survivorCount ?? 25), 0, 1000);
   const hazardCount = clamp(Math.floor(options.hazardCount ?? 3), 0, 30);
-  const seed = options.seed ?? 20261021, random = randomFor(seed);
+  const seed = options.seed ?? 20261021, random = randomFor(seed);\n  const packetLossRate = clamp(options.packetLossRate ?? 0.05, 0, 0.95);\n  const linkLatencyMs = clamp(Math.floor(options.linkLatencyMs ?? 30), 1, 500);
   const roles: DroneRole[] = ['command', 'command', 'relay', 'relay', 'relay', 'relay', 'sensor', 'sensor', 'sensor', 'sensor', 'logistics'];
   const drones: Drone[] = Array.from({ length: droneCount }, (_, id) => {
     const x = 40 + random() * (width - 80), y = 40 + random() * (height - 80);
@@ -128,7 +128,7 @@ export function createWorld(options: Scenario = {}): World {
   }));
   const survivors: Survivor[] = Array.from({ length: survivorCount }, (_, id) => ({
     id, x: random() * width, y: random() * height, emergency: random() < 0.3,
-    connected: false, localCoverage: false, signal: 0
+    connected: false, localCoverage: false, signal: 0, pathLatencyMs: null
   }));
   const draft = { width, height, tick: 0, seed, baseStation: { x: width / 2, y: height - 28 },
     baseRange: 150, drones, survivors, hazards, links: [] as Link[] };
@@ -139,7 +139,7 @@ export function stepWorld(input: World): World {
   // Copy all mutable state: callers can retain prior snapshots safely.
   const world = {
     width: input.width, height: input.height, tick: input.tick + 1, seed: input.seed,
-    baseStation: { ...input.baseStation }, baseRange: input.baseRange,
+    baseStation: { ...input.baseStation }, baseRange: input.baseRange, packetLossRate: input.packetLossRate, linkLatencyMs: input.linkLatencyMs,
     drones: input.drones.map(d => ({ ...d, target: { ...d.target } })),
     survivors: input.survivors.map(s => ({ ...s })),
     hazards: input.hazards.map(h => ({ ...h })), links: [] as Link[]
