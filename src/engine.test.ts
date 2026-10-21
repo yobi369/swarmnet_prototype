@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, exportScenario, recomputeConnectivity, stepWorld, type World } from './engine';
+import { runBenchmark } from './benchmark';
 
 test('same seed creates identical worlds', () => {
   assert.deepEqual(createWorld({ seed: 42 }), createWorld({ seed: 42 }));
@@ -81,4 +82,13 @@ test('latency setting is bounded and reflected in connected path estimates', () 
   assert.ok(world.survivors.filter(s => s.connected).every(s => s.pathLatencyMs !== null && s.pathLatencyMs >= 80));
   if (world.survivors.some(s => s.connected)) assert.ok(world.metrics.meanPathLatencyMs >= 80);
   else assert.equal(world.metrics.meanPathLatencyMs, 0);
+});
+
+test('batch benchmark is reproducible and reports bounded coverage', () => {
+  const options = { seeds: [9, 10], ticks: 3, packetLossRates: [0, 0.4], droneCount: 6, survivorCount: 8 };
+  const first = runBenchmark(options);
+  assert.deepEqual(first, runBenchmark(options));
+  assert.equal(first.length, 4);
+  assert.ok(first.every(row => row.meanConnectedPercent >= 0 && row.meanConnectedPercent <= 100));
+  assert.ok(first.every(row => row.finalConnectedPercent >= 0 && row.finalConnectedPercent <= 100));
 });
