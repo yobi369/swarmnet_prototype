@@ -59,3 +59,7 @@ A run is not evidence of field performance. Record the seed, configuration, soft
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Network semantics
+
+The incident base station is a fixed simulated gateway. A drone is a gateway node only when its radio range overlaps the base station's configured range. Drone-to-drone links form an undirected graph; breadth-first reachability from gateway drones determines which drones can relay traffic to the base. The dashboard reports local radio coverage separately from end-to-end survivor connectivity, so a survivor near an isolated drone is not incorrectly counted as connected. This remains an idealized geometric radio model: packet delivery, interference, latency, terrain obstruction, and asymmetric links are not simulated yet.
