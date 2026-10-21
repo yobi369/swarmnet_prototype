@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld, exportScenario, stepWorld } from './engine';
+import { createWorld, exportScenario, recomputeConnectivity, stepWorld, type World } from './engine';
 
 test('same seed creates identical worlds', () => {
   assert.deepEqual(createWorld({ seed: 42 }), createWorld({ seed: 42 }));
@@ -29,15 +29,39 @@ test('links are unique undirected pairs and only include active drones', () => {
   assert.equal(new Set(pairs).size, pairs.length);
   assert.ok(world.links.every(l => l.from !== l.to));
 });
-test('coverage metrics match survivor state', () => {
+test('end-to-end connected survivor has a base-reachable drone path', () => {
   const world = createWorld({ seed: 88, survivorCount: 50 });
-  const connected = world.survivors.filter(s => s.connected).length;
-  assert.equal(world.metrics.connectedSurvivors, connected);
-  assert.equal(world.metrics.survivorCoverage, Math.round(100 * connected / world.survivors.length));
+  const reachable = new Set<number>();
+  const queue = world.drones.filter(d => d.active && Math.hypot(d.x-world.baseStation.x,d.y-world.baseStation.y) <= Math.min(d.range,world.baseRange)).map(d=>d.id);
+  for (const id of queue) reachable.add(id);
+  const adjacency = new Map<number, number[]>();
+  for (const link of world.links) {
+    adjacency.set(link.from, [...(adjacency.get(link.from) ?? []), link.to]);
+    adjacency.set(link.to, [...(adjacency.get(link.to) ?? []), link.from]);
+  }
+  for (let i=0;i<queue.length;i++) for (const next of adjacency.get(queue[i]) ?? []) if (!reachable.has(next)) { reachable.add(next); queue.push(next); }
+  for (const survivor of world.survivors.filter(s=>s.connected)) {
+    assert.ok(world.drones.some(d=>d.active && reachable.has(d.id) && Math.hypot(d.x-survivor.x,d.y-survivor.y)<=d.range));
+  }
 });
-test('export is valid, versioned JSON', () => {
+test('local radio coverage is distinguished from end-to-end connectivity', () => {
+  const world = createWorld({ seed: 19, droneCount: 1, survivorCount: 0 });
+  const draft = { ...world, drones: [{ ...world.drones[0], x: 30, y: 30, range: 20 }],
+    survivors: [{ id: 1, x: 35, y: 30, emergency: true, connected: false, localCoverage: false, signal: 0 }], links: [] };
+  recomputeConnectivity(draft as Omit<World, 'metrics'>);
+  assert.equal(draft.survivors[0].localCoverage, true);
+  assert.equal(draft.survivors[0].connected, false);
+});
+test('metrics distinguish local radio reach from base-connected survivors', () => {
+  const world = createWorld({ seed: 88, survivorCount: 50 });
+  assert.ok(world.metrics.localCoverageSurvivors >= world.metrics.connectedSurvivors);
+  assert.equal(world.metrics.connectedSurvivors, world.survivors.filter(s => s.connected).length);
+  assert.equal(world.metrics.localCoverageSurvivors, world.survivors.filter(s => s.localCoverage).length);
+});
+test('export is valid, versioned JSON with gateway topology', () => {
   const world = createWorld({ seed: 5 });
   const data = JSON.parse(exportScenario(world));
-  assert.equal(data.schemaVersion, 1);
+  assert.equal(data.schemaVersion, 2);
   assert.equal(data.seed, 5);
+  assert.deepEqual(data.baseStation, world.baseStation);
 });
