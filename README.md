@@ -68,3 +68,8 @@ The incident base station is a fixed simulated gateway. A drone is a gateway nod
 ## Network reliability model (schema v3)
 
 The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
+
+
+## Network reliability model (schema v3)
+
+The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
