@@ -86,9 +86,12 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
       const d = distance(a, b);
       const limit = Math.min(a.range, b.range);
       if (d <= limit) {
-        world.links.push({ from: a.id, to: b.id, strength: clamp(1 - d / limit, 0, 1) });
-        adjacency.get(a.id)?.add(b.id);
-        adjacency.get(b.id)?.add(a.id);
+        const available = deterministicUnit(world.seed, world.tick, a.id, b.id) >= world.packetLossRate;
+        world.links.push({ from: a.id, to: b.id, strength: clamp(1 - d / limit, 0, 1), available, latencyMs: world.linkLatencyMs });
+        if (available) {
+          adjacency.get(a.id)?.add(b.id);
+          adjacency.get(b.id)?.add(a.id);
+        }
       }
     }
   }
@@ -117,7 +120,6 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
     s.localCoverage = bestLocal > 0;
     s.connected = bestEndToEnd > 0;
     s.signal = Math.round(bestLocal * 100);
-    s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
     s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
   }
 }
