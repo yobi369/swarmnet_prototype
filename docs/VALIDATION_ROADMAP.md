@@ -45,3 +45,12 @@ SwarmNet is a deterministic geometric simulation prototype. It is useful for sof
 ## Release gate
 
 No claim of real-world rescue readiness should be made until independent tests substantiate it. Keep human operators in control of deployment decisions and never use this prototype as the sole basis for emergency response.
+
+## Implemented in the reliability-model milestone
+
+- A deterministic per-link, per-tick availability model controlled by packet-loss probability.
+- Gateway links can fail under the same model, so direct radio reach is not automatically treated as a usable route.
+- Configurable per-hop latency and estimated survivor path latency based on shortest-hop reachability.
+- Dashboard controls and export schema v3 record these assumptions.
+
+These are deliberately simple abstractions. Before using results to inform operational decisions, calibrate packet loss and latency against a named radio/network stack and compare against measured traces. Next validation work should add distributions and burst loss, link-quality asymmetry, obstacle/terrain effects, routing-algorithm comparisons, and benchmark suites with confidence intervals.
