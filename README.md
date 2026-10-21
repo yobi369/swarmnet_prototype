@@ -1,5 +1,7 @@
 # SwarmNet — Disaster Response Simulation Lab
 
+**A reproducible drone-swarm simulation for studying disaster-area survivor connectivity, mesh-network reliability, and emergency-response coordination.**
+
 SwarmNet is an open, browser-based research prototype for exploring how autonomous drone teams could support emergency communications and survivor discovery when conventional infrastructure is disrupted.
 
 > **Safety boundary:** SwarmNet is a simulation and planning aid, not a certified rescue system, emergency dispatch service, radio propagation model, or flight controller. Do not use its output as operational guidance without independent validation.
