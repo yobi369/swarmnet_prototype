@@ -67,9 +67,14 @@ The incident base station is a fixed simulated gateway. A drone is a gateway nod
 
 ## Network reliability model (schema v3)
 
-The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
+The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same packet-delivery outcome, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
 
 
 ## Network reliability model (schema v3)
 
 The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
+
+
+## Batch experiments
+
+Run `npm run benchmark` to compare the same seeded scenarios across packet-loss settings. The default batch uses five seeds, five loss rates, and 100 simulation ticks per run; output is JSON with mean and final survivor connectivity, estimated mean path latency, and final active-drone count. For a smaller local experiment, import `runBenchmark` from `src/benchmark.ts` and pass custom seeds, ticks, loss rates, drone count, survivor count, and per-hop latency. Results are simulator comparisons only; use calibrated traces and field measurements before drawing operational conclusions.
