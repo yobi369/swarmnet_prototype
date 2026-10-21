@@ -16,3 +16,5 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run check
+      - name: Run reproducible benchmark smoke test
+        run: npm run benchmark
