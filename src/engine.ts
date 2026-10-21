@@ -38,7 +38,11 @@ function randomFor(seed: number) {
     return state / 0x100000000;
   };
 }
-function deterministicUnit(seed: number, tick: number, from: number, to: number) {\n  const raw = Math.sin((seed + 1) * 12.9898 + (tick + 1) * 78.233 + (from + 2) * 37.719 + (to + 3) * 11.131) * 43758.5453;\n  return raw - Math.floor(raw);\n}\nfunction metricsFor(world: Omit<World, 'metrics'>): Metrics {
+function deterministicUnit(seed: number, tick: number, from: number, to: number) {
+  const raw = Math.sin((seed + 1) * 12.9898 + (tick + 1) * 78.233 + (from + 2) * 37.719 + (to + 3) * 11.131) * 43758.5453;
+  return raw - Math.floor(raw);
+}
+function metricsFor(world: Omit<World, 'metrics'>): Metrics {
   const connected = world.survivors.filter(s => s.connected);
   const local = world.survivors.filter(s => s.localCoverage);
   const total = world.survivors.length;
@@ -49,6 +53,7 @@ function deterministicUnit(seed: number, tick: number, from: number, to: number)
     if (world.drones.some(d => d.active && distance(d, p) <= d.range)) covered++;
   }
   const active = world.drones.filter(d => d.active);
+  const pathLatencies = connected.map(s => s.pathLatencyMs).filter((v): v is number => v !== null);
   return {
     tick: world.tick, activeDrones: active.length,
     survivorCoverage: total ? Math.round(100 * connected.length / total) : 100,
@@ -56,7 +61,9 @@ function deterministicUnit(seed: number, tick: number, from: number, to: number)
     connectedSurvivors: connected.length,
     emergencyConnected: connected.filter(s => s.emergency).length,
     networkLinks: world.links.length,
-    gatewayDrones: active.filter(d => distance(d, world.baseStation) <= Math.min(d.range, world.baseRange)).length,
+    availableLinks: world.links.filter(link => link.available).length,
+    gatewayDrones: active.filter(d => distance(d, world.baseStation) <= Math.min(d.range, world.baseRange) && deterministicUnit(world.seed, world.tick, d.id, -1) >= world.packetLossRate).length,
+    meanPathLatencyMs: pathLatencies.length ? Math.round(pathLatencies.reduce((sum, value) => sum + value, 0) / pathLatencies.length) : 0,
     meanBattery: active.length ? Math.round(active.reduce((n, d) => n + d.battery, 0) / active.length) : 0,
     estimatedAreaCoverage: Math.round(100 * covered / (samples * samples))
   };
@@ -86,11 +93,12 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
     }
   }
   const reachable = new Set<number>();
-  const queue = active.filter(d => distance(d, world.baseStation) <= Math.min(d.range, world.baseRange)).map(d => d.id);
-  for (const id of queue) reachable.add(id);
+  const queue = active.filter(d => distance(d, world.baseStation) <= Math.min(d.range, world.baseRange) && deterministicUnit(world.seed, world.tick, d.id, -1) >= world.packetLossRate).map(d => d.id);
+  const hops = new Map<number, number>();
+  for (const id of queue) { reachable.add(id); hops.set(id, 0); }
   for (let cursor = 0; cursor < queue.length; cursor++) {
     for (const next of adjacency.get(queue[cursor]) ?? []) {
-      if (!reachable.has(next)) { reachable.add(next); queue.push(next); }
+      if (!reachable.has(next)) { reachable.add(next); hops.set(next, (hops.get(queue[cursor]) ?? 0) + 1); queue.push(next); }
     }
   }
   for (const s of world.survivors) {
@@ -100,12 +108,17 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
       if (dist <= d.range) {
         const signal = clamp(1 - dist / d.range, 0, 1);
         bestLocal = Math.max(bestLocal, signal);
-        if (reachable.has(d.id)) {\n          bestEndToEnd = Math.max(bestEndToEnd, signal);\n          bestHops = Math.min(bestHops, (hops.get(d.id) ?? 0) + 1);\n        }
+        if (reachable.has(d.id)) {
+          bestEndToEnd = Math.max(bestEndToEnd, signal);
+          bestHops = Math.min(bestHops, (hops.get(d.id) ?? 0) + 1);
+        }
       }
     }
     s.localCoverage = bestLocal > 0;
     s.connected = bestEndToEnd > 0;
-    s.signal = Math.round(bestLocal * 100);\n    s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
+    s.signal = Math.round(bestLocal * 100);
+    s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
+    s.pathLatencyMs = bestEndToEnd > 0 ? bestHops * world.linkLatencyMs : null;
   }
 }
 export function createWorld(options: Scenario = {}): World {
@@ -113,7 +126,9 @@ export function createWorld(options: Scenario = {}): World {
   const droneCount = clamp(Math.floor(options.droneCount ?? 15), 1, 100);
   const survivorCount = clamp(Math.floor(options.survivorCount ?? 25), 0, 1000);
   const hazardCount = clamp(Math.floor(options.hazardCount ?? 3), 0, 30);
-  const seed = options.seed ?? 20261021, random = randomFor(seed);\n  const packetLossRate = clamp(options.packetLossRate ?? 0.05, 0, 0.95);\n  const linkLatencyMs = clamp(Math.floor(options.linkLatencyMs ?? 30), 1, 500);
+  const seed = options.seed ?? 20261021, random = randomFor(seed);
+  const packetLossRate = clamp(options.packetLossRate ?? 0.05, 0, 0.95);
+  const linkLatencyMs = clamp(Math.floor(options.linkLatencyMs ?? 30), 1, 500);
   const roles: DroneRole[] = ['command', 'command', 'relay', 'relay', 'relay', 'relay', 'sensor', 'sensor', 'sensor', 'sensor', 'logistics'];
   const drones: Drone[] = Array.from({ length: droneCount }, (_, id) => {
     const x = 40 + random() * (width - 80), y = 40 + random() * (height - 80);
@@ -128,7 +143,7 @@ export function createWorld(options: Scenario = {}): World {
   }));
   const survivors: Survivor[] = Array.from({ length: survivorCount }, (_, id) => ({
     id, x: random() * width, y: random() * height, emergency: random() < 0.3,
-    connected: false, localCoverage: false, signal: 0, pathLatencyMs: null
+    connected: false, localCoverage: false, signal: 0, pathLatencyMs: null, pathLatencyMs: null
   }));
   const draft = { width, height, tick: 0, seed, baseStation: { x: width / 2, y: height - 28 },
     baseRange: 150, drones, survivors, hazards, links: [] as Link[] };
@@ -173,8 +188,9 @@ export function stepWorld(input: World): World {
   return { ...world, metrics: metricsFor(world) };
 }
 export function exportScenario(world: World) {
-  return JSON.stringify({ schemaVersion: 2, seed: world.seed, width: world.width, height: world.height,
+  return JSON.stringify({ schemaVersion: 3, seed: world.seed, width: world.width, height: world.height,
     tick: world.tick, baseStation: world.baseStation, baseRange: world.baseRange,
+    packetLossRate: world.packetLossRate, linkLatencyMs: world.linkLatencyMs,
     drones: world.drones, survivors: world.survivors, hazards: world.hazards,
     links: world.links, metrics: world.metrics }, null, 2);
 }
