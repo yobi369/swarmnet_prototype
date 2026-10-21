@@ -63,3 +63,13 @@ MIT. See [LICENSE](LICENSE).
 ## Network semantics
 
 The incident base station is a fixed simulated gateway. A drone is a gateway node only when its radio range overlaps the base station's configured range. Drone-to-drone links form an undirected graph; breadth-first reachability from gateway drones determines which drones can relay traffic to the base. The dashboard reports local radio coverage separately from end-to-end survivor connectivity, so a survivor near an isolated drone is not incorrectly counted as connected. This remains an idealized geometric radio model: packet delivery, interference, latency, terrain obstruction, and asymmetric links are not simulated yet.
+
+
+## Network reliability model (schema v3)
+
+The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.
+
+
+## Network reliability model (schema v3)
+
+The simulator can apply a configurable deterministic packet-loss probability to each drone-to-drone link and each drone-to-base gateway link at every simulation tick. The same seed, tick, and link pair produce the same availability decision, which keeps experiments reproducible. Connected survivor path latency is an estimate based on hop count multiplied by the configured per-hop latency; it is not a packet-level timing measurement. The dashboard exposes packet-loss and latency assumptions, available links, gateway availability, and mean estimated survivor path latency. This is a simplified link model, not a validated propagation model or network emulator.

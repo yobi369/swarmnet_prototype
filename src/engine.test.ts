@@ -47,7 +47,7 @@ test('end-to-end connected survivor has a base-reachable drone path', () => {
 test('local radio coverage is distinguished from end-to-end connectivity', () => {
   const world = createWorld({ seed: 19, droneCount: 1, survivorCount: 0 });
   const draft = { ...world, drones: [{ ...world.drones[0], x: 30, y: 30, range: 20 }],
-    survivors: [{ id: 1, x: 35, y: 30, emergency: true, connected: false, localCoverage: false, signal: 0 }], links: [] };
+    survivors: [{ id: 1, x: 35, y: 30, emergency: true, connected: false, localCoverage: false, signal: 0, pathLatencyMs: null }], links: [] };
   recomputeConnectivity(draft as Omit<World, 'metrics'>);
   assert.equal(draft.survivors[0].localCoverage, true);
   assert.equal(draft.survivors[0].connected, false);
@@ -61,7 +61,24 @@ test('metrics distinguish local radio reach from base-connected survivors', () =
 test('export is valid, versioned JSON with gateway topology', () => {
   const world = createWorld({ seed: 5 });
   const data = JSON.parse(exportScenario(world));
-  assert.equal(data.schemaVersion, 2);
+  assert.equal(data.schemaVersion, 3);
   assert.equal(data.seed, 5);
   assert.deepEqual(data.baseStation, world.baseStation);
+});
+
+test('packet loss deterministically removes usable mesh links', () => {
+  const ideal = createWorld({ seed: 31, packetLossRate: 0 });
+  const lossy = createWorld({ seed: 31, packetLossRate: 0.9 });
+  assert.ok(ideal.links.every(link => link.available));
+  assert.ok(lossy.links.every(link => link.latencyMs === 30));
+  assert.ok(lossy.metrics.availableLinks <= ideal.metrics.availableLinks);
+  assert.ok(lossy.metrics.connectedSurvivors <= ideal.metrics.connectedSurvivors);
+  assert.deepEqual(lossy, createWorld({ seed: 31, packetLossRate: 0.9 }));
+});
+test('latency setting is bounded and reflected in connected path estimates', () => {
+  const world = createWorld({ seed: 31, packetLossRate: 0, linkLatencyMs: 80 });
+  assert.ok(world.links.every(link => link.latencyMs === 80));
+  assert.ok(world.survivors.filter(s => s.connected).every(s => s.pathLatencyMs !== null && s.pathLatencyMs >= 80));
+  if (world.survivors.some(s => s.connected)) assert.ok(world.metrics.meanPathLatencyMs >= 80);
+  else assert.equal(world.metrics.meanPathLatencyMs, 0);
 });
