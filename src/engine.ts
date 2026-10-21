@@ -17,7 +17,7 @@ export interface Scenario {
 export interface Metrics {
   tick: number; activeDrones: number; survivorCoverage: number;
   localCoverageSurvivors: number; connectedSurvivors: number; emergencyConnected: number;
-  networkLinks: number; availableLinks: number; gatewayDrones: number; meanPathLatencyMs: number; meanBattery: number;
+  networkLinks: number; successfulTransmissions: number; gatewayDrones: number; meanPathLatencyMs: number; meanBattery: number;
   estimatedAreaCoverage: number;
 }
 export interface World {
@@ -61,7 +61,7 @@ function metricsFor(world: Omit<World, 'metrics'>): Metrics {
     connectedSurvivors: connected.length,
     emergencyConnected: connected.filter(s => s.emergency).length,
     networkLinks: world.links.length,
-    availableLinks: world.links.filter(link => link.available).length,
+    successfulTransmissions: world.links.filter(link => link.packetDelivered).length,
     gatewayDrones: active.filter(d => distance(d, world.baseStation) <= Math.min(d.range, world.baseRange) && deterministicUnit(world.seed, world.tick, d.id, -1) >= world.packetLossRate).length,
     meanPathLatencyMs: pathLatencies.length ? Math.round(pathLatencies.reduce((sum, value) => sum + value, 0) / pathLatencies.length) : 0,
     meanBattery: active.length ? Math.round(active.reduce((n, d) => n + d.battery, 0) / active.length) : 0,
@@ -86,9 +86,9 @@ export function recomputeConnectivity(world: Omit<World, 'metrics'>) {
       const d = distance(a, b);
       const limit = Math.min(a.range, b.range);
       if (d <= limit) {
-        const available = deterministicUnit(world.seed, world.tick, a.id, b.id) >= world.packetLossRate;
-        world.links.push({ from: a.id, to: b.id, strength: clamp(1 - d / limit, 0, 1), available, latencyMs: world.linkLatencyMs });
-        if (available) {
+        const packetDelivered = deterministicUnit(world.seed, world.tick, a.id, b.id) >= world.packetLossRate;
+        world.links.push({ from: a.id, to: b.id, strength: clamp(1 - d / limit, 0, 1), packetDelivered, latencyMs: world.linkLatencyMs });
+        if (packetDelivered) {
           adjacency.get(a.id)?.add(b.id);
           adjacency.get(b.id)?.add(a.id);
         }
