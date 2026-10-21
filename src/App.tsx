@@ -63,7 +63,7 @@ export default function App() {
     for (const link of world.links) {
       const a = world.drones.find(d => d.id === link.from), b = world.drones.find(d => d.id === link.to);
       if (!a || !b) continue;
-      ctx.strokeStyle = link.packetDelivered ? `rgba(62,210,190,${.12 + link.strength * .45})` : 'rgba(255,82,104,.55)'; ctx.lineWidth = 1; ctx.setLineDash(link.available ? [] : [3, 3]);
+      ctx.strokeStyle = link.packetDelivered ? `rgba(62,210,190,${.12 + link.strength * .45})` : 'rgba(255,82,104,.55)'; ctx.lineWidth = 1; ctx.setLineDash(link.packetDelivered ? [] : [3, 3]);
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.setLineDash([]);
     }
     for (const s of world.survivors) {
