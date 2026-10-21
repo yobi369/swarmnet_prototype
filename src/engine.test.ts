@@ -70,7 +70,8 @@ test('packet loss deterministically removes usable mesh links', () => {
   const ideal = createWorld({ seed: 31, packetLossRate: 0 });
   const lossy = createWorld({ seed: 31, packetLossRate: 0.9 });
   assert.ok(ideal.links.every(link => link.available));
-  assert.ok(lossy.links.every(link => !link.available || link.latencyMs === 30));
+  assert.ok(lossy.links.every(link => link.latencyMs === 30));
+  assert.ok(lossy.metrics.availableLinks <= ideal.metrics.availableLinks);
   assert.ok(lossy.metrics.connectedSurvivors <= ideal.metrics.connectedSurvivors);
   assert.deepEqual(lossy, createWorld({ seed: 31, packetLossRate: 0.9 }));
 });
@@ -78,5 +79,6 @@ test('latency setting is bounded and reflected in connected path estimates', () 
   const world = createWorld({ seed: 31, packetLossRate: 0, linkLatencyMs: 80 });
   assert.ok(world.links.every(link => link.latencyMs === 80));
   assert.ok(world.survivors.filter(s => s.connected).every(s => s.pathLatencyMs !== null && s.pathLatencyMs >= 80));
-  assert.equal(world.metrics.meanPathLatencyMs, 0, world.survivors.every(s => !s.connected) ? 'no routes' : 'routes exist');
+  if (world.survivors.some(s => s.connected)) assert.ok(world.metrics.meanPathLatencyMs >= 80);
+  else assert.equal(world.metrics.meanPathLatencyMs, 0);
 });
