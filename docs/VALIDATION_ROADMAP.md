@@ -54,3 +54,8 @@ No claim of real-world rescue readiness should be made until independent tests s
 - Dashboard controls and export schema v3 record these assumptions.
 
 These are deliberately simple abstractions. Before using results to inform operational decisions, calibrate packet loss and latency against a named radio/network stack and compare against measured traces. Next validation work should add distributions and burst loss, link-quality asymmetry, obstacle/terrain effects, routing-algorithm comparisons, and benchmark suites with confidence intervals.
+
+
+## Reproducible batch benchmarking
+
+A `npm run benchmark` command now compares seeded runs across configurable packet-loss settings and reports average/final connectivity, estimated path latency, and remaining active drones. The benchmark harness is intended for relative comparisons, not claims about real rescue performance. A future study should compare routing/coordination strategies under identical seed sets, add confidence intervals and workload profiles, and validate parameters against recorded network traces.

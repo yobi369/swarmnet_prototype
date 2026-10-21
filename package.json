@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "tsx --test src/engine.test.ts",
-    "check": "npm run test && npm run build"
+    "check": "npm run test && npm run build",
+    "benchmark": "tsx src/benchmark.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
