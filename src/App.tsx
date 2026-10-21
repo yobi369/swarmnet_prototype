@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Activity, AlertTriangle, BatteryCharging, Download, Pause, Play, Radio, RotateCcw, Users, Wifi } from 'lucide-react';
 import { createWorld, exportScenario, stepWorld, type World } from './engine';
 
@@ -97,6 +97,6 @@ export default function App() {
     <footer><span>SWARMNET · OPEN RESEARCH FOUNDATION</span><span>Not validated for operational rescue or autonomous flight.</span></footer>
   </main>;
 }
-function Metric({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: string; detail: string }) {
+function Metric({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail: string }) {
   return <article className="metric-card"><div className="metric-icon">{icon}</div><p>{label}</p><strong>{value}</strong><small>{detail}</small></article>;
 }
