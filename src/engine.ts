@@ -9,7 +9,7 @@ export interface Survivor extends Point {
   id: number; emergency: boolean; connected: boolean; localCoverage: boolean; signal: number; pathLatencyMs: number | null;
 }
 export interface Hazard extends Point { id: number; kind: HazardKind; radius: number }
-export interface Link { from: number; to: number; strength: number; available: boolean; latencyMs: number }
+export interface Link { from: number; to: number; strength: number; packetDelivered: boolean; latencyMs: number }
 export interface Scenario {
   width?: number; height?: number; droneCount?: number; survivorCount?: number;
   hazardCount?: number; seed?: number; packetLossRate?: number; linkLatencyMs?: number;
