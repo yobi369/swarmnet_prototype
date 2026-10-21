@@ -69,9 +69,9 @@ test('export is valid, versioned JSON with gateway topology', () => {
 test('packet loss deterministically removes usable mesh links', () => {
   const ideal = createWorld({ seed: 31, packetLossRate: 0 });
   const lossy = createWorld({ seed: 31, packetLossRate: 0.9 });
-  assert.ok(ideal.links.every(link => link.available));
+  assert.ok(ideal.links.every(link => link.packetDelivered));
   assert.ok(lossy.links.every(link => link.latencyMs === 30));
-  assert.ok(lossy.metrics.availableLinks <= ideal.metrics.availableLinks);
+  assert.ok(lossy.metrics.successfulTransmissions <= ideal.metrics.availableLinks);
   assert.ok(lossy.metrics.connectedSurvivors <= ideal.metrics.connectedSurvivors);
   assert.deepEqual(lossy, createWorld({ seed: 31, packetLossRate: 0.9 }));
 });
