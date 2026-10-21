@@ -145,10 +145,10 @@ export function createWorld(options: Scenario = {}): World {
   }));
   const survivors: Survivor[] = Array.from({ length: survivorCount }, (_, id) => ({
     id, x: random() * width, y: random() * height, emergency: random() < 0.3,
-    connected: false, localCoverage: false, signal: 0, pathLatencyMs: null, pathLatencyMs: null
+    connected: false, localCoverage: false, signal: 0, pathLatencyMs: null
   }));
   const draft = { width, height, tick: 0, seed, baseStation: { x: width / 2, y: height - 28 },
-    baseRange: 150, drones, survivors, hazards, links: [] as Link[] };
+    baseRange: 150, packetLossRate, linkLatencyMs, drones, survivors, hazards, links: [] as Link[] };
   recomputeConnectivity(draft);
   return { ...draft, metrics: metricsFor(draft) };
 }
